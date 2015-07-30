@@ -10,6 +10,8 @@ TABLE_CELL = /\|([^|\n]+)/
 PARAGRAPH = /(^(?:(?!%%%|\||\(.\)|=\w=|[ ]{4}|\t).+\n)+)/
 BREAK = /(\\\\)\n[ \t]*/
 COMMENT = /^%%% (.*)$/
+FORMAT = /(?<=\s)([~\^_])([\w ]*)\1/
+EMPHASIS = /(?<=\s)(<(?:\g<1>|(.*?))>)(?=\s)/
 
 module TimberText
 
@@ -29,7 +31,6 @@ module TimberText
     text.gsub!(PARAGRAPH) do
       "<p>#{rinse_repeat($1.gsub(/(?!^|\\\\)\n(?!=\n)/, ' '),level)}</p>\n"
     end
-    text.gsub!(BREAK , '</br>')
     text.gsub!(COMMENT , '<!-- \1 -->')
     text.gsub!(TAG_GROUP) do
       case $1
@@ -73,7 +74,36 @@ module TimberText
     text
   end
 
+  def self.once( text )
+    text.gsub!(EMPHASIS) do
+      inside = $2
+      case $1.match(/(<*)/)[0].length
+        when 1
+          "<em>#{inside}</em>"
+        when 2
+          "<strong>#{inside}</strong>"
+        when 3
+          "<em><strong>#{inside}</strong></em>"
+        else
+          inside
+      end
+    end
+    text.gsub!(FORMAT) do
+      case $1
+        when '~'
+          "<s>#{$2}</s>"
+        when '_'
+          "<sub>#{$2}</sub>"
+        when '^'
+          "<sup>#{$2}</sup>"
+      end
+    end
+    text.gsub!(BREAK , '</br>')
+    text
+  end
+
   def self.build( text )
+    text = once( text )
     parse(text , 1)
   end
 end
@@ -108,6 +138,7 @@ HEADER_TEST = '    =h= Another H1
     (#) this is is ok tooo
     (#) hello there
 (#) a new thing
+    inside of a paragraph <emphasis> <<strong>> <<<both>>> ~strike~ ^superscript^ _subs_cript_
 (*) yet another thing
 %%% this is a comment
 '
