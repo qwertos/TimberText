@@ -1,12 +1,8 @@
 STRIP = /^(?:\t|[ ]{4})(.*$)/
-TAG_GROUP = /^=(\w)= .*\n(?:.+\n)*?\n*(?==\w=|\z)/
-CODE_GROUP = /^=c= (.*)\n((?:.+\n)*?)\n*(?==\w=|\z)/
-HEADER_GROUP = /^=h= (.*)\n((?:.+\n)*?)\n*(?==\w=|\z)/
-QUOTE_GROUP = /^=q= ((?:.+\n)*?)\n*(?==\w=|\z)/
-LIST_GROUP = /^(\((\*)\) .*(?:\n|\z)(?:(?!\(#\)).+(?:\n|\z))*)|^(\((#)\) .*(?:\n|\z)(?:(?!\(\*\)).+(?:\n|\z))*)/
-UNORDERED_GROUP = /^(\((\*)\) .*(?:\n|\z)(?:(?!\(#\)).+(?:\n|\z))*)/
+TAG_GROUP = /^=(\w)= (.*\n(?:(?:[ ]{4}|\t).*\n)*)/
+HEADER = /(.*)\n((?:(?:[ ]{4}|\t).*\n)*)/
+LIST_GROUP = /((?:^\((#|\*)\).*(?:\n|\z))(?:(?=\(\2\)|[\t ]).*(?:\n|\z))*)/
 UNORDERED_ITEM = /^\(\*\) (.*\n(?:(?!\(\*\)).*\n|\n*)*)/
-ORDERED_GROUP = /^(\((#)\) .*(?:\n|\z)(?:(?!\(\*\)).+(?:\n|\z))*)/
 ORDERED_ITEM = /^\(#\) (.*\n(?:(?!\(#\)).*\n|\n*)*)/
 TABLE = /((?:(?:\|[^|\n]*)+\|\n)*)(?:(?:\|[\- ]*)+\|\n)((?:(?:\|[^|\n]*)+\|\n)*)/
 TABLE_ROW = /((?:\|[^|\n]*)*)\|\n/
@@ -27,28 +23,29 @@ module TimberText
   end
 
   def self.parse( text , level = 1)
-    text.gsub!(TAG_GROUP) do |m|
-      case m
-        when CODE_GROUP
-          "<pre><code#{$1 ? " class=\"#{$1}\"" : ''}>\n" + rinse($2) + '</code></pre>'
-        when HEADER_GROUP
-          "<h#{level}>#{$1}</h#{level}>" + rinse_repeat($2,level)
-        when QUOTE_GROUP
-          '<blockquote>' + rinse_repeat( $1 , level) + '</blockquote>'
+    text.gsub!(TAG_GROUP) do
+      case $1
+        when 'c'
+          $2.gsub(HEADER , "<pre><code#{$1 ? " class=\"#{$1}\"" : ''}>\n" + rinse($2) + '</code></pre>' )
+        when '1','2','3','4','5','6'
+          level = $1.to_i
+          $2.gsub(HEADER , "<h#{level}>#{$1}</h#{level}>" + rinse_repeat($2,level) )
+        when 'h'
+          $2.gsub(HEADER , "<h#{level}>#{$1}</h#{level}>" + rinse_repeat($2,level) )
+        when 'p'
+          '<p>' + rinse_repeat($2,level) + '</p>'
+        when 'q'
+          '<blockquote>' + rinse_repeat( $2 , level) + '</blockquote>'
         else
           ''
       end
     end
     text.gsub!(LIST_GROUP) do
-      if $2
-        '<ul>' + $1.gsub(UNORDERED_ITEM) do
-          '<li>' + rinse_repeat( $1, level + 1) + '</li>'
-        end + '</ul>'
-      else
-        'ol' + $3.gsub(ORDERED_ITEM) do
-          '<li>' + rinse_repeat( $1, level + 1) + '</li>'
-        end + '</ol>'
-      end
+      tag = $2.eql?('*') ? 'ul' : 'ol'
+      match = $2.eql?( '*') ? UNORDERED_ITEM : ORDERED_ITEM
+      "<#{tag}>" + $1.gsub(match) do
+        '<li>' + rinse_repeat( $1, level + 1) + '</li>'
+      end + "</#{tag}>"
     end
     text.gsub!(TABLE) do
       head = $1 ? $1 : ''
