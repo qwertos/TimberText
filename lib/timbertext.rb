@@ -7,8 +7,9 @@ ORDERED_ITEM = /^\(#\) (.*\n(?:(?!\(#\)).*\n|\n*)*)/
 TABLE = /((?:(?:\|[^|\n]*)+\|\n)*)(?:(?:\|[\- ]*)+\|\n)((?:(?:\|[^|\n]*)+\|\n)*)/
 TABLE_ROW = /((?:\|[^|\n]*)*)\|\n/
 TABLE_CELL = /\|([^|\n]+)/
-PARAGRAPH = /(^(?:(?!\||\(.\)|=\w=|[ ]{4}|\t).+\n)+)/
+PARAGRAPH = /(^(?:(?!%%%|\||\(.\)|=\w=|[ ]{4}|\t).+\n)+)/
 BREAK = /(\\\\)\n[ \t]*/
+COMMENT = /^%%% (.*)$/
 
 module TimberText
 
@@ -28,7 +29,8 @@ module TimberText
     text.gsub!(PARAGRAPH) do
       "<p>#{rinse_repeat($1.gsub(/(?!^|\\\\)\n(?!=\n)/, ' '),level)}</p>\n"
     end
-    text.gsub!(BREAK , "</br>")
+    text.gsub!(BREAK , '</br>')
+    text.gsub!(COMMENT , '<!-- \1 -->')
     text.gsub!(TAG_GROUP) do
       case $1
         when 'c'
@@ -107,6 +109,7 @@ HEADER_TEST = '    =h= Another H1
     (#) hello there
 (#) a new thing
 (*) yet another thing
+%%% this is a comment
 '
 
 puts TimberText.build( HEADER_TEST )
