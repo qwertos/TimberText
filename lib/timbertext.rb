@@ -8,17 +8,16 @@ UNORDERED_GROUP = /^(\((\*)\) .*(?:\n|\z)(?:(?!\(#\)).+(?:\n|\z))*)/
 UNORDERED_ITEM = /^\(\*\) (.*\n(?:(?!\(\*\)).*\n|\n*)*)/
 ORDERED_GROUP = /^(\((#)\) .*(?:\n|\z)(?:(?!\(\*\)).+(?:\n|\z))*)/
 ORDERED_ITEM = /^\(#\) (.*\n(?:(?!\(#\)).*\n|\n*)*)/
+TABLE = /((?:(?:\|[^|\n]*)+\|\n)*)(?:(?:\|[\- ]*)+\|\n)((?:(?:\|[^|\n]*)+\|\n)*)/
+TABLE_ROW = /((?:\|[^|\n]*)*)\|\n/
+TABLE_CELL = /\|([^|\n]+)/
 
 module TimberText
 
   def self.rinse_repeat( group , level = nil)
     if group
       group.gsub!(STRIP,'\1')
-      if level
-        parse( group , level + 1)
-      else
-        group
-      end
+      level ? parse( group , level + 1) : group
     else
       ''
     end
@@ -31,30 +30,34 @@ module TimberText
     text.gsub!(TAG_GROUP) do |m|
       case m
         when CODE_GROUP
-          result = '<pre><code'
-          result += " class=\"#{$1}\"" if $1
-          result + ">\n" + rinse($2) + '</code></pre>'
+          "<pre><code#{$1 ? " class=\"#{$1}\"" : ''}>\n" + rinse($2) + '</code></pre>'
         when HEADER_GROUP
-          result = "<h#{level}>#{$1}</h#{level}>"
-          result + rinse_repeat($2,level)
+          "<h#{level}>#{$1}</h#{level}>" + rinse_repeat($2,level)
         when QUOTE_GROUP
           '<blockquote>' + rinse_repeat( $1 , level) + '</blockquote>'
         else
           ''
       end
     end
-    text.gsub!(LIST_GROUP) do |m|
+    text.gsub!(LIST_GROUP) do
       if $2
-        items = $1.gsub(UNORDERED_ITEM) do
+        '<ul>' + $1.gsub(UNORDERED_ITEM) do
           '<li>' + rinse_repeat( $1, level + 1) + '</li>'
-        end
-        '<ul>' + items + '</ul>'
+        end + '</ul>'
       else
-        items = $3.gsub(ORDERED_ITEM) do
+        'ol' + $3.gsub(ORDERED_ITEM) do
           '<li>' + rinse_repeat( $1, level + 1) + '</li>'
-        end
-        '<ol>' + items + '</ol>'
+        end + '</ol>'
       end
+    end
+    text.gsub!(TABLE) do
+      head = $1 ? $1 : ''
+      body = $2 ? $2 : ''
+      '<table><thead>' + head.gsub(TABLE_ROW) do
+        '<tr>' + $1.gsub(TABLE_CELL, '<th>\1</th>') + '</tr>'
+      end + '</thead><tbody>' + body.gsub(TABLE_ROW) do
+        '<tr>' + $1.gsub(TABLE_CELL, '<td>\1</td>') + '</tr>'
+      end + '</tbody></table>'
     end
     text
   end
@@ -78,6 +81,10 @@ HEADER_TEST = '    =h= Another H1
         =h= Header 3
     =h= Another H2
         =h= Another H3
+            | column | column |
+            |--------|--------|
+            | item 1 | item 2 |
+            | item 3 | item 4 |
 =h= another group
 (*) why?
     also a thing
