@@ -12,6 +12,13 @@ BREAK = /(\\\\)\n[ \t]*/
 COMMENT = /^%%% (.*)$/
 FORMAT = /(?<=\s)([~\^_])([\w ]*)\1/
 EMPHASIS = /(?<=\s)(<(?:\g<1>|(.*?))>)(?=\s)/
+NORMAL_LINK = /(?<=\s|\A)(?:\[(.+?)\])?\[(.+?)\](?=\s|\z)/
+REF_LINK = /(?<=\s|\A)(?:\[(.+?)\])?\{(.+?)\}(?=\s|\z)/
+NUMBERED_REF = /\{(.*)\}/
+REF_DECLARATION = /\{(.+?)\}(?:\[(.+?)\])?\[(.+?)\]\n/
+NAMESPACE = /(.+):(.+)/
+
+$NAMESPACE_ROOT = '/edge'
 
 module TimberText
 
@@ -74,6 +81,15 @@ module TimberText
     text
   end
 
+  def self.build_link_source( match )
+    case match
+      when NAMESPACE
+        "#{$NAMESPACE_ROOT}/#{$1}/#{$2}"
+      else
+        match
+    end
+  end
+
   def self.once( text )
     text.gsub!(EMPHASIS) do
       inside = $2
@@ -99,12 +115,51 @@ module TimberText
       end
     end
     text.gsub!(BREAK , '</br>')
+    text.gsub!(NORMAL_LINK) do
+      label = $1 ? $1 : ''
+      src = build_link_source( $2 )
+      "<a href=\"#{src}\">#{label}</a>"
+    end
+    text.gsub!(REF_LINK) do
+      label = $1 ? $1 : ''
+      ref = $2
+      case ref
+        when NUMBERED_REF
+          $REF_COUNT += 1
+          $USED_REFS << $1
+          "<a href=\"#REF#{$REF_COUNT}\">[#{$REF_COUNT}]</a>"
+        else
+          "<a href=\"#{$REFS[ref][:src]}\">#{label}</a>"
+      end
+    end
+    text
+  end
+
+  def self.extract_refs( text )
+    $REFS = {}
+    text.gsub(REF_DECLARATION) do
+      src = build_link_source($3)
+      label = $2 ? $2 : src
+      $REFS[$1] = {label: label , src: src }
+      ''
+    end
+  end
+
+  def self.add_references( text )
+    $USED_REFS.each_with_index do |k,i|
+      puts k
+      text += "\n<a id=\"REF#{i+1}\" href=\"#{$REFS[k][:src]}\">[#{i+1}] #{$REFS[k][:label]}</a>"
+    end
     text
   end
 
   def self.build( text )
-    text = once( text )
-    parse(text , 1)
+    $REF_COUNT = 0
+    $USED_REFS = []
+    text = extract_refs(text)
+    text = once(text)
+    text = parse(text , 1)
+    add_references( text )
   end
 end
 
@@ -137,10 +192,14 @@ HEADER_TEST = '    =h= Another H1
     this is strill a thiing
     (#) this is is ok tooo
     (#) hello there
+    [optional label][project:/hello] or [relative link|absolute path] or [optional label]{ref1} or {{ref3}} or {{ref2}}
 (#) a new thing
     inside of a paragraph <emphasis> <<strong>> <<<both>>> ~strike~ ^superscript^ _subs_cript_
 (*) yet another thing
 %%% this is a comment
+{ref1}[optional label][namespace:relative path]
+{ref2}[relative path]
+{ref3}[optional label][absolute path]
 '
 
 puts TimberText.build( HEADER_TEST )
