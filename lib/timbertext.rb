@@ -21,7 +21,7 @@ NAMESPACE = /(.+):(.+)/
 $NAMESPACE_ROOT = '/edge'
 
 module TimberText
-  VERSION = '0.1.0'
+  VERSION = '0.1.1'
 
   def self.rinse_repeat( group , level = nil)
     if group
@@ -147,10 +147,12 @@ module TimberText
   end
 
   def self.add_references( text )
+    text += '<span>References</span><ul>'
     $USED_REFS.each_with_index do |k,i|
       puts k
-      text += "\n<a id=\"REF#{i+1}\" href=\"#{$REFS[k][:src]}\">[#{i+1}] #{$REFS[k][:label]}</a>"
+      text += "\n<li><a id=\"REF#{i+1}\" href=\"#{$REFS[k][:src]}\">[#{i+1}] #{$REFS[k][:label]}</a></li>"
     end
+    text += '</ul>'
     text
   end
 
