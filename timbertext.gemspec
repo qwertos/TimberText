@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'timbertext'
-  s.version     = '0.1.0'
+  s.version     = TimberText::Version
   s.date        = '2015-08-06'
   s.summary     = 'TimberText'
   s.description = 'TimberText is a tree-based markup language that is designed for sectioned documents'
