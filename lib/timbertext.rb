@@ -1,22 +1,22 @@
-STRIP = /^(?:\t|[ ]{4})(.*$)/
-TAG_GROUP = /^=(\w)= (.*\n(?:(?:[ ]{4}|\t).*\n)*)/
-HEADER = /(.*)\n((?:(?:[ ]{4}|\t).*\n)*)/
-LIST_GROUP = /((?:^\((#|\*)\).*(?:\n|\z))(?:(?=\(\2\)|[\t ]).*(?:\n|\z))*)/
-UNORDERED_ITEM = /^\(\*\) (.*\n(?:(?!\(\*\)).*\n|\n*)*)/
-ORDERED_ITEM = /^\(#\) (.*\n(?:(?!\(#\)).*\n|\n*)*)/
-TABLE = /((?:(?:\|[^|\n]*)+\|\n)*)(?:(?:\|[\- ]*)+\|\n)((?:(?:\|[^|\n]*)+\|\n)*)/
-TABLE_ROW = /((?:\|[^|\n]*)*)\|\n/
-TABLE_CELL = /\|([^|\n]+)/
-PARAGRAPH = /(^(?:(?!%%%|\||\(.\)|=\w=|[ ]{4}|\t).+\n)+)/
-BREAK = /(\\\\)\n[ \t]*/
-COMMENT = /^%%% (.*)$/
-FORMAT = /(?<=\s)([~\^_])([\w ]*)\1/
-EMPHASIS = /(?<=\s)(<(?:\g<1>|(.*?))>)(?=\s)/
-NORMAL_LINK = /(?<=\s|\A)(?:\[(.+?)\])?\[(.+?)\](?=\s|\z)/
-REF_LINK = /(?<=\s|\A)(?:\[(.+?)\])?\{(.+?)\}(?=\s|\z)/
-NUMBERED_REF = /\{(.*)\}/
-REF_DECLARATION = /\{(.+?)\}(?:\[(.+?)\])?\[(.+?)\]\n/
-NAMESPACE = /(.+):(.+)/
+TT_STRIP = /^(?:\t|[ ]{4})(.*$)/
+TT_TAG_GROUP = /^=(\w)= (.*\n(?:(?:[ ]{4}|\t).*\n)*)/
+TT_HEADER = /(.*)\n((?:(?:[ ]{4}|\t).*\n)*)/
+TT_LIST_GROUP = /((?:^\((#|\*)\).*(?:\n|\z))(?:(?=\(\2\)|[\t ]).*(?:\n|\z))*)/
+TT_UNORDERED_ITEM = /^\(\*\) (.*\n(?:(?!\(\*\)).*\n|\n*)*)/
+TT_ORDERED_ITEM = /^\(#\) (.*\n(?:(?!\(#\)).*\n|\n*)*)/
+TT_TABLE = /((?:(?:\|[^|\n]*)+\|\n)*)(?:(?:\|[\- ]*)+\|\n)((?:(?:\|[^|\n]*)+\|\n)*)/
+TT_TABLE_ROW = /((?:\|[^|\n]*)*)\|\n/
+TT_TABLE_CELL = /\|([^|\n]+)/
+TT_PARAGRAPH = /(^(?:(?!%%%|\||\(.\)|=\w=|[ ]{4}|\t).+\n)+)/
+TT_BREAK = /(\\\\)\n[ \t]*/
+TT_COMMENT = /^%%% (.*)$/
+TT_FORMAT = /(?<=\s)([~\^_])([\w ]*)\1/
+TT_EMPHASIS = /(?<=\s)(<(?:\g<1>|(.*?))>)(?=\s)/
+TT_NORMAL_LINK = /(?<=\s|\A)(?:\[(.+?)\])?\[(.+?)\](?=\s|\z)/
+TT_REF_LINK = /(?<=\s|\A)(?:\[(.+?)\])?\{(.+?)\}(?=\s|\z)/
+TT_NUMBERED_REF = /\{(.*)\}/
+TT_REF_DECLARATION = /\{(.+?)\}(?:\[(.+?)\])?\[(.+?)\]\n/
+TT_NAMESPACE = /(.+):(.+)/
 
 $NAMESPACE_ROOT = '/edge'
 
@@ -25,7 +25,7 @@ module TimberText
 
   def self.rinse_repeat( group , level = nil)
     if group
-      group.gsub!(STRIP,'\1')
+      group.gsub!(TT_STRIP,'\1')
       level ? parse( group , level + 1) : group
     else
       ''
@@ -36,23 +36,23 @@ module TimberText
   end
 
   def self.parse( text , level = 1)
-    text.gsub!(PARAGRAPH) do
+    text.gsub!(TT_PARAGRAPH) do
       "<p>#{rinse_repeat($1.gsub(/(?!^|\\\\)\n(?!=\n)/, ' '),level)}</p>\n"
     end
-    text.gsub!(COMMENT , '<!-- \1 -->')
-    text.gsub!(TAG_GROUP) do
+    text.gsub!(TT_COMMENT , '<!-- \1 -->')
+    text.gsub!(TT_TAG_GROUP) do
       case $1
         when 'c'
-          $2.gsub(HEADER) do
+          $2.gsub(TT_HEADER) do
             "<pre><code#{$1 ? " class=\"#{$1}\"" : ''}>\n" + rinse($2) + '</code></pre>'
           end
         when '1','2','3','4','5','6'
           level = $1.to_i
-          $2.gsub(HEADER) do
+          $2.gsub(TT_HEADER) do
             "<h#{level}>#{$1}</h#{level}>\n" + rinse_repeat($2,level)
           end
         when 'h'
-          $2.gsub(HEADER) do
+          $2.gsub(TT_HEADER) do
             "<h#{level}>#{$1}</h#{level}>\n" + rinse_repeat($2,level)
           end
         when 'p'
@@ -63,20 +63,20 @@ module TimberText
           ''
       end
     end
-    text.gsub!(LIST_GROUP) do
+    text.gsub!(TT_LIST_GROUP) do
       tag = $2.eql?('*') ? 'ul' : 'ol'
-      match = $2.eql?('*') ? UNORDERED_ITEM : ORDERED_ITEM
+      match = $2.eql?('*') ? TT_UNORDERED_ITEM : TT_ORDERED_ITEM
       "<#{tag}>" + $1.gsub(match) do
         '<li>' + rinse_repeat( $1, level + 1) + '</li>'
       end + "</#{tag}>"
     end
-    text.gsub!(TABLE) do
+    text.gsub!(TT_TABLE) do
       head = $1 ? $1 : ''
       body = $2 ? $2 : ''
-      '<table><thead>' + head.gsub(TABLE_ROW) do
-        '<tr>' + $1.gsub(TABLE_CELL, '<th>\1</th>') + '</tr>'
-      end + '</thead><tbody>' + body.gsub(TABLE_ROW) do
-        '<tr>' + $1.gsub(TABLE_CELL, '<td>\1</td>') + '</tr>'
+      '<table><thead>' + head.gsub(TT_TABLE_ROW) do
+        '<tr>' + $1.gsub(TT_TABLE_CELL, '<th>\1</th>') + '</tr>'
+      end + '</thead><tbody>' + body.gsub(TT_TABLE_ROW) do
+        '<tr>' + $1.gsub(TT_TABLE_CELL, '<td>\1</td>') + '</tr>'
       end + '</tbody></table>'
     end
     text
@@ -84,7 +84,7 @@ module TimberText
 
   def self.build_link_source( match )
     case match
-      when NAMESPACE
+      when TT_NAMESPACE
         "#{$NAMESPACE_ROOT}/#{$1}/#{$2}"
       else
         match
@@ -92,7 +92,7 @@ module TimberText
   end
 
   def self.once( text )
-    text.gsub!(EMPHASIS) do
+    text.gsub!(TT_EMPHASIS) do
       inside = $2
       case $1.match(/(<*)/)[0].length
         when 1
@@ -105,7 +105,7 @@ module TimberText
           inside
       end
     end
-    text.gsub!(FORMAT) do
+    text.gsub!(TT_FORMAT) do
       case $1
         when '~'
           "<s>#{$2}</s>"
@@ -115,17 +115,17 @@ module TimberText
           "<sup>#{$2}</sup>"
       end
     end
-    text.gsub!(BREAK , '</br>')
-    text.gsub!(NORMAL_LINK) do
+    text.gsub!(TT_BREAK , '</br>')
+    text.gsub!(TT_NORMAL_LINK) do
       label = $1 ? $1 : ''
       src = build_link_source( $2 )
       "<a href=\"#{src}\">#{label}</a>"
     end
-    text.gsub!(REF_LINK) do
+    text.gsub!(TT_REF_LINK) do
       label = $1 ? $1 : ''
       ref = $2
       case ref
-        when NUMBERED_REF
+        when TT_NUMBERED_REF
           $REF_COUNT += 1
           $USED_REFS << $1
           "<a href=\"#REF#{$REF_COUNT}\">[#{$REF_COUNT}]</a>"
@@ -138,7 +138,7 @@ module TimberText
 
   def self.extract_refs( text )
     $REFS = {}
-    text.gsub(REF_DECLARATION) do
+    text.gsub(TT_REF_DECLARATION) do
       src = build_link_source($3)
       label = $2 ? $2 : src
       $REFS[$1] = {label: label , src: src }
