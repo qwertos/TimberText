@@ -21,7 +21,7 @@ TT_NAMESPACE = /(.+):(.+)/
 $NAMESPACE_ROOT = '/edge'
 
 module TimberText
-  VERSION = '0.1.1'
+  VERSION = '0.1.2'
 
   def self.rinse_repeat( group , level = nil)
     if group
