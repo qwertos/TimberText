@@ -46,6 +46,7 @@ And will look like this:
 ## Grammar [In-Progress]
 The following is an modified EBNF grammar for TimberText.
 
+```
 TERMINAL = '\n' ;
 NONZERO = REGEX [1-9] ;
 DIGIT = '0' | NONZERO ;
@@ -55,3 +56,4 @@ WORD = CHARACTER , WORD | CHARACTER , TERMINAL ;
 TITLE = WORD , ' ' , TITLE | WORD , TERMINAL ;
 
 HEADER = { "=" , { NONZERO | 'h' } , "=" } , TITLE , TERMINAL ;
+```
